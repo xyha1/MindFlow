@@ -1,19 +1,13 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { Idea, PASTEL_COLORS } from '../types';
 import { IconPlus, IconSparkles, IconTrash, IconBulb } from './Icons';
 import { expandIdea } from '../services/geminiService';
+import useLocalStorage from '../hooks/useLocalStorage';
 
 const IdeaBoard: React.FC = () => {
-  const [ideas, setIdeas] = useState<Idea[]>(() => {
-    const saved = localStorage.getItem('mindflow_ideas');
-    return saved ? JSON.parse(saved) : [];
-  });
+  const [ideas, setIdeas] = useLocalStorage<Idea[]>('mindflow_ideas', []);
   const [inputValue, setInputValue] = useState('');
   const [expandingId, setExpandingId] = useState<string | null>(null);
-
-  useEffect(() => {
-    localStorage.setItem('mindflow_ideas', JSON.stringify(ideas));
-  }, [ideas]);
 
   const addIdea = () => {
     if (!inputValue.trim()) return;
@@ -44,7 +38,7 @@ const IdeaBoard: React.FC = () => {
   };
 
   return (
-    <div className="h-full flex flex-col p-6 pt-10 bg-slate-50/50">
+    <div className="h-full flex flex-col p-6 pt-10 bg-slate-50/50 landscape:pl-24 landscape:pt-6">
       <div className="mb-6">
         <h1 className="text-3xl font-extrabold text-slate-800">Idea Board</h1>
         <p className="text-slate-500">Capture your thoughts instantly.</p>
@@ -65,8 +59,8 @@ const IdeaBoard: React.FC = () => {
         </button>
       </div>
 
-      <div className="flex-1 overflow-y-auto no-scrollbar pb-24">
-        <div className="columns-2 gap-4 space-y-4">
+      <div className="flex-1 overflow-y-auto no-scrollbar pb-24 landscape:pb-6">
+        <div className="columns-2 landscape:columns-3 xl:landscape:columns-4 gap-4 space-y-4">
           {ideas.map(idea => (
             <div
               key={idea.id}

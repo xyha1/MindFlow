@@ -1,20 +1,14 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { Todo } from '../types';
 import { IconCheck, IconPlus, IconTrash, IconSparkles, IconArchive, IconHistory, IconChevronLeft } from './Icons';
 import { generateSubtasks } from '../services/geminiService';
+import useLocalStorage from '../hooks/useLocalStorage';
 
 const TodoList: React.FC = () => {
-  const [tasks, setTasks] = useState<Todo[]>(() => {
-    const saved = localStorage.getItem('mindflow_tasks');
-    return saved ? JSON.parse(saved) : [];
-  });
+  const [tasks, setTasks] = useLocalStorage<Todo[]>('mindflow_tasks', []);
   const [inputValue, setInputValue] = useState('');
   const [isAiLoading, setIsAiLoading] = useState(false);
   const [view, setView] = useState<'active' | 'history'>('active');
-
-  useEffect(() => {
-    localStorage.setItem('mindflow_tasks', JSON.stringify(tasks));
-  }, [tasks]);
 
   const addTask = (text: string) => {
     if (!text.trim()) return;
@@ -100,7 +94,7 @@ const TodoList: React.FC = () => {
 
   if (view === 'history') {
     return (
-      <div className="h-full flex flex-col p-6 pt-10">
+      <div className="h-full flex flex-col p-6 pt-10 landscape:pl-24 landscape:pt-6">
         <div className="mb-6 flex items-center gap-2">
           <button 
             onClick={() => setView('active')}
@@ -114,7 +108,7 @@ const TodoList: React.FC = () => {
           </div>
         </div>
 
-        <div className="flex-1 overflow-y-auto no-scrollbar pb-24 space-y-6">
+        <div className="flex-1 overflow-y-auto no-scrollbar pb-24 landscape:pb-6 space-y-6">
           {historyDates.length === 0 && (
              <div className="text-center text-slate-400 mt-20 flex flex-col items-center">
                 <IconHistory className="w-12 h-12 mb-2 opacity-20"/>
@@ -142,7 +136,7 @@ const TodoList: React.FC = () => {
   }
 
   return (
-    <div className="h-full flex flex-col p-6 pt-10">
+    <div className="h-full flex flex-col p-6 pt-10 landscape:pl-24 landscape:pt-6">
       <div className="mb-8 flex justify-between items-start">
         <div>
           <h1 className="text-3xl font-extrabold text-slate-800 tracking-tight">Today's Focus</h1>
@@ -186,7 +180,7 @@ const TodoList: React.FC = () => {
         </button>
       </div>
 
-      <div className="flex-1 overflow-y-auto no-scrollbar pb-32 space-y-3 relative">
+      <div className="flex-1 overflow-y-auto no-scrollbar pb-32 landscape:pb-6 space-y-3 relative">
         {activeTasks.length === 0 && (
           <div className="text-center text-slate-400 mt-20">
             <p className="text-lg">All clear! Relax or add a task.</p>
@@ -218,7 +212,7 @@ const TodoList: React.FC = () => {
 
       {/* Floating Archive Action Button */}
       {completedCount > 0 && (
-        <div className="absolute bottom-24 left-0 right-0 flex justify-center z-10 animate-in fade-in slide-in-from-bottom-4 duration-300 pointer-events-none">
+        <div className="absolute bottom-24 left-0 right-0 flex justify-center z-10 animate-in fade-in slide-in-from-bottom-4 duration-300 pointer-events-none landscape:bottom-6 landscape:left-24">
             <button 
                 onClick={handleArchive}
                 className="pointer-events-auto flex items-center gap-2 bg-slate-800 text-white px-6 py-3 rounded-full shadow-xl shadow-slate-800/30 hover:bg-slate-700 hover:scale-105 active:scale-95 transition-all"
