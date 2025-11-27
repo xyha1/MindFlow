@@ -3,6 +3,21 @@ import { GoogleGenAI } from "@google/genai";
 const apiKey = process.env.API_KEY || '';
 const ai = apiKey ? new GoogleGenAI({ apiKey }) : null;
 
+export const checkSystemStatus = async (): Promise<{ok: boolean, message: string}> => {
+  if (!ai) return { ok: false, message: "AI Client not initialized (Missing API Key)" };
+  try {
+    // Simple ping to check if key works
+    await ai.models.generateContent({
+      model: 'gemini-2.5-flash',
+      contents: 'Ping',
+    });
+    return { ok: true, message: "AI System Operational!" };
+  } catch (error: any) {
+    console.error("Diagnostic Error:", error);
+    return { ok: false, message: error.message || "Connection Failed" };
+  }
+};
+
 export const generateSubtasks = async (task: string): Promise<string[]> => {
   if (!ai) return [];
   try {
