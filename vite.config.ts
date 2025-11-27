@@ -11,6 +11,8 @@ export default defineConfig(({ mode }) => {
     define: {
       // Stringify the API key to inject it into the code as a string
       'process.env.API_KEY': JSON.stringify(env.API_KEY),
+      // Stringify the Base URL for proxy support
+      'process.env.API_BASE_URL': JSON.stringify(env.API_BASE_URL),
     },
     build: {
       outDir: 'dist',

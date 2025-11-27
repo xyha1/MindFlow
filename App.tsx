@@ -41,13 +41,18 @@ const App: React.FC = () => {
         
         {/* DIAGNOSTIC BAR: REMOVE AFTER TESTING */}
         <div className="bg-slate-900 text-white text-[10px] p-2 flex justify-between items-center z-50 shrink-0">
-            <span className="font-mono">
-                API Key: {process.env.API_KEY ? <span className="text-green-400">LOADED</span> : <span className="text-red-500 font-bold">MISSING</span>}
-            </span>
+            <div className="flex flex-col">
+              <span className="font-mono">
+                  API Key: {process.env.API_KEY ? <span className="text-green-400">LOADED</span> : <span className="text-red-500 font-bold">MISSING</span>}
+              </span>
+              <span className="font-mono text-slate-400">
+                  Proxy: {process.env.API_BASE_URL ? <span className="text-blue-400">CONFIGURED</span> : "DIRECT"}
+              </span>
+            </div>
             {process.env.API_KEY && (
                 <button 
                     onClick={runDiagnostics} 
-                    className="bg-slate-700 hover:bg-slate-600 px-3 py-1 rounded text-white transition-colors"
+                    className="bg-slate-700 hover:bg-slate-600 px-3 py-1 rounded text-white transition-colors h-8"
                 >
                     Test AI {diagMessage && `(${diagMessage})`}
                 </button>

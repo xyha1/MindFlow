@@ -1,7 +1,15 @@
 import { GoogleGenAI } from "@google/genai";
 
 const apiKey = process.env.API_KEY || '';
-const ai = apiKey ? new GoogleGenAI({ apiKey }) : null;
+const baseUrl = process.env.API_BASE_URL;
+
+// Initialize with baseUrl if it exists (for proxying)
+const options: any = { apiKey };
+if (baseUrl) {
+  options.baseUrl = baseUrl;
+}
+
+const ai = apiKey ? new GoogleGenAI(options) : null;
 
 export const checkSystemStatus = async (): Promise<{ok: boolean, message: string}> => {
   if (!ai) return { ok: false, message: "AI Client not initialized (Missing API Key)" };
