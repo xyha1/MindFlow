@@ -11,18 +11,71 @@ if (baseUrl) {
 
 const ai = apiKey ? new GoogleGenAI(options) : null;
 
-export const checkSystemStatus = async (): Promise<{ok: boolean, message: string}> => {
+interface DiagnosticResult {
+  ok: boolean;
+  message: string;
+  debugInfo?: any;
+}
+
+export const checkSystemStatus = async (): Promise<DiagnosticResult> => {
   if (!ai) return { ok: false, message: "AI Client not initialized (Missing API Key)" };
+
+  const modelName = 'gemini-2.5-flash';
+  const testContent = 'Ping';
+  
+  // Construct what the request likely looks like for debugging purposes
+  // Note: This matches the SDK's internal logic for the v1beta API
+  const effectiveBaseUrl = baseUrl || "https://generativelanguage.googleapis.com/v1beta";
+  const debugTargetUrl = `${effectiveBaseUrl}/models/${modelName}:generateContent`;
+  
+  const debugInfo = {
+    configuration: {
+      hasApiKey: !!apiKey,
+      maskedKey: apiKey ? `...${apiKey.slice(-4)}` : 'N/A',
+      baseUrl: baseUrl || "(Default Google)",
+    },
+    simulatedRequest: {
+      url: debugTargetUrl,
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-goog-api-key': apiKey ? `...${apiKey.slice(-4)}` : 'MISSING'
+      },
+      payload: {
+        model: modelName,
+        contents: [
+            { role: 'user', parts: [{ text: testContent }] }
+        ]
+      }
+    }
+  };
+
   try {
     // Simple ping to check if key works
     await ai.models.generateContent({
-      model: 'gemini-2.5-flash',
-      contents: 'Ping',
+      model: modelName,
+      contents: testContent,
     });
-    return { ok: true, message: "AI System Operational!" };
+    return { 
+        ok: true, 
+        message: "AI System Operational!", 
+        debugInfo 
+    };
   } catch (error: any) {
     console.error("Diagnostic Error:", error);
-    return { ok: false, message: error.message || "Connection Failed" };
+    return { 
+        ok: false, 
+        message: error.message || "Connection Failed",
+        debugInfo: {
+            ...debugInfo,
+            errorDetails: {
+                name: error.name,
+                message: error.message,
+                status: error.status,
+                statusText: error.statusText
+            }
+        }
+    };
   }
 };
 

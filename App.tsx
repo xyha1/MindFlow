@@ -27,11 +27,15 @@ const App: React.FC = () => {
   const runDiagnostics = async () => {
     setDiagMessage('Connecting...');
     const result = await checkSystemStatus();
-    setDiagMessage(result.message);
+    setDiagMessage(result.ok ? 'OK' : 'Error');
+    
+    // Pretty print the debug details
+    const debugText = JSON.stringify(result.debugInfo, null, 2);
+    
     if (!result.ok) {
-        alert("Diagnostics Failed:\n" + result.message);
+        alert(`❌ DIAGNOSTICS FAILED\n\nReason: ${result.message}\n\nDEBUG INFO:\n${debugText}`);
     } else {
-        alert("Diagnostics Passed:\n" + result.message);
+        alert(`✅ SYSTEM OPERATIONAL\n\n${result.message}\n\nDEBUG INFO:\n${debugText}`);
     }
   };
 
@@ -40,21 +44,21 @@ const App: React.FC = () => {
       <div className="w-full max-w-md h-full bg-white sm:shadow-2xl sm:my-4 sm:rounded-[3rem] sm:h-[95vh] relative flex flex-col overflow-hidden landscape:max-w-full landscape:my-0 landscape:rounded-none landscape:h-full">
         
         {/* DIAGNOSTIC BAR: REMOVE AFTER TESTING */}
-        <div className="bg-slate-900 text-white text-[10px] p-2 flex justify-between items-center z-50 shrink-0">
-            <div className="flex flex-col">
-              <span className="font-mono">
-                  API Key: {process.env.API_KEY ? <span className="text-green-400">LOADED</span> : <span className="text-red-500 font-bold">MISSING</span>}
+        <div className="bg-slate-900 text-white text-[10px] p-2 flex justify-between items-center z-50 shrink-0 shadow-md">
+            <div className="flex flex-col max-w-[70%]">
+              <span className="font-mono flex items-center gap-1">
+                  API Key: {process.env.API_KEY ? <span className="text-green-400 font-bold">● LOADED</span> : <span className="text-red-500 font-bold">● MISSING</span>}
               </span>
-              <span className="font-mono text-slate-400">
-                  Proxy: {process.env.API_BASE_URL ? <span className="text-blue-400">CONFIGURED</span> : "DIRECT"}
+              <span className="font-mono text-slate-400 truncate" title={process.env.API_BASE_URL}>
+                  Proxy: {process.env.API_BASE_URL ? <span className="text-blue-300">{process.env.API_BASE_URL}</span> : <span className="text-slate-500">Direct (Google)</span>}
               </span>
             </div>
             {process.env.API_KEY && (
                 <button 
                     onClick={runDiagnostics} 
-                    className="bg-slate-700 hover:bg-slate-600 px-3 py-1 rounded text-white transition-colors h-8"
+                    className={`px-3 py-1 rounded text-white transition-colors h-8 text-xs font-bold border border-slate-600 ${diagMessage === 'Error' ? 'bg-red-600 hover:bg-red-700' : 'bg-slate-700 hover:bg-slate-600'}`}
                 >
-                    Test AI {diagMessage && `(${diagMessage})`}
+                    {diagMessage || 'Test Conn'}
                 </button>
             )}
         </div>
