@@ -4,6 +4,8 @@ export enum Tab {
   IDEAS = 'IDEAS',
 }
 
+export type EventStatus = 'active' | 'completed' | 'cancelled';
+
 export interface Todo {
   id: string;
   text: string;
@@ -18,6 +20,9 @@ export interface CalendarEvent {
   dateStr: string; // YYYY-MM-DD
   title: string;
   time?: string;
+  status: EventStatus;
+  // Legacy field support (optional)
+  completed?: boolean; 
 }
 
 export interface Idea {

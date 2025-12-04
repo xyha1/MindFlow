@@ -1,15 +1,67 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import TabBar from './components/TabBar';
 import TodoList from './components/TodoList';
 import CalendarView from './components/CalendarView';
 import IdeaBoard from './components/IdeaBoard';
-import { Tab } from './types';
+import { Tab, CalendarEvent, EventStatus } from './types';
 import useLocalStorage from './hooks/useLocalStorage';
 import { checkSystemStatus } from './services/geminiService';
+import { configureNotifications, snoozeNotification } from './services/notificationService';
+import { LocalNotifications } from '@capacitor/local-notifications';
 
 const App: React.FC = () => {
   const [activeTab, setActiveTab] = useLocalStorage<Tab>('mindflow_active_tab', Tab.TODO);
   const [diagMessage, setDiagMessage] = useState<string>('');
+
+  // Initialize notifications and listeners
+  useEffect(() => {
+    configureNotifications();
+
+    const listener = LocalNotifications.addListener('localNotificationActionPerformed', async (notification) => {
+      const actionId = notification.actionId;
+      const extra = notification.notification.extra;
+
+      console.log(`Action performed: ${actionId}`, extra);
+
+      if (actionId === 'snooze') {
+          await snoozeNotification(notification.notification);
+          return;
+      }
+
+      if ((actionId === 'complete' || actionId === 'cancel') && extra?.eventId && extra?.dateStr) {
+        try {
+          const storedEventsStr = window.localStorage.getItem('mindflow_events');
+          if (storedEventsStr) {
+            const allEvents: Record<string, CalendarEvent[]> = JSON.parse(storedEventsStr);
+            const dateEvents = allEvents[extra.dateStr];
+            
+            if (dateEvents) {
+              const newStatus: EventStatus = actionId === 'complete' ? 'completed' : 'cancelled';
+              
+              const updatedDateEvents = dateEvents.map(evt => 
+                evt.id === extra.eventId ? { ...evt, status: newStatus } : evt
+              );
+              
+              const newEvents = { ...allEvents, [extra.dateStr]: updatedDateEvents };
+              
+              // Update Storage
+              window.localStorage.setItem('mindflow_events', JSON.stringify(newEvents));
+              
+              // Trigger hook update across app
+              window.dispatchEvent(new Event('local-storage'));
+              console.log(`Event marked ${newStatus} via notification`);
+            }
+          }
+        } catch (e) {
+          console.error("Failed to update event from notification", e);
+        }
+      }
+    });
+
+    return () => {
+      listener.then(remove => remove.remove());
+    };
+  }, []);
 
   const renderContent = () => {
     switch (activeTab) {

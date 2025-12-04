@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { CalendarEvent } from '../types';
-import { IconChevronLeft, IconChevronRight, IconClock, IconPlus, IconTrash, IconSparkles } from './Icons';
+import { CalendarEvent, EventStatus } from '../types';
+import { IconChevronLeft, IconChevronRight, IconClock, IconPlus, IconTrash, IconSparkles, IconCheck } from './Icons';
 import { suggestEventTitle } from '../services/geminiService';
 import { scheduleNotification, cancelNotification, requestNotificationPermission } from '../services/notificationService';
 import useLocalStorage from '../hooks/useLocalStorage';
@@ -46,6 +46,7 @@ const CalendarView: React.FC = () => {
       dateStr: targetDate,
       title: title,
       time: timeOverride,
+      status: 'active'
     };
 
     setEvents(prev => ({
@@ -98,6 +99,25 @@ const CalendarView: React.FC = () => {
         return { ...prev, [dateStr]: newDayEvents };
     });
   };
+  
+  const toggleEventStatus = (dateStr: string, id: string) => {
+      setEvents(prev => {
+          const dayEvents = prev[dateStr] || [];
+          const updatedEvents = dayEvents.map(evt => {
+              if (evt.id !== id) return evt;
+              
+              // Cycle: active -> completed -> active (ignoring 'cancelled' in simple toggle, users delete for cancel usually)
+              // But if it IS cancelled, reset to active
+              let newStatus: EventStatus = 'active';
+              if (evt.status === 'active' || !evt.status) newStatus = 'completed';
+              else if (evt.status === 'completed') newStatus = 'active';
+              else if (evt.status === 'cancelled') newStatus = 'active';
+
+              return { ...evt, status: newStatus };
+          });
+          return { ...prev, [dateStr]: updatedEvents };
+      });
+  };
 
   // Generate grid cells
   const blanks = Array.from({ length: firstDay }, (_, i) => <div key={`blank-${i}`} className="h-10"></div>);
@@ -126,6 +146,21 @@ const CalendarView: React.FC = () => {
   });
 
   const selectedEvents = events[selectedDateStr] || [];
+
+  // Sort: Active items first (by time), then Completed/Cancelled items (by time)
+  const sortedEvents = [...selectedEvents].sort((a, b) => {
+      // Helper to determine sort weight: Active = 0, Others = 1
+      const getWeight = (s?: EventStatus) => (s === 'active' || !s) ? 0 : 1;
+      
+      const weightA = getWeight(a.status);
+      const weightB = getWeight(b.status);
+      
+      if (weightA !== weightB) {
+          return weightA - weightB;
+      }
+      // If same status category, sort by time
+      return (a.time || '').localeCompare(b.time || '');
+  });
 
   return (
     <div className="h-full flex flex-col p-6 pt-10 landscape:pl-24 landscape:pt-6">
@@ -157,35 +192,58 @@ const CalendarView: React.FC = () => {
             </h2>
             
             <div className="flex-1 overflow-y-auto no-scrollbar space-y-3 pb-40 landscape:pb-24">
-                {selectedEvents.length === 0 ? (
+                {sortedEvents.length === 0 ? (
                     <div className="flex flex-col items-center justify-center py-10 text-slate-300 space-y-2">
                         <IconClock className="w-8 h-8 opacity-20" />
                         <span className="text-sm">No events planned</span>
                     </div>
                 ) : (
-                    selectedEvents
-                    .sort((a, b) => (a.time || '').localeCompare(b.time || ''))
-                    .map(evt => (
-                        <div key={evt.id} className="flex items-center p-4 bg-white rounded-2xl border border-slate-100 shadow-sm transition-transform active:scale-[0.98]">
-                            <div className={`h-12 w-12 rounded-2xl flex flex-col items-center justify-center mr-4 ${evt.time ? 'bg-primary-50 text-primary-600' : 'bg-slate-50 text-slate-400'}`}>
-                                {evt.time ? (
-                                    <>
-                                        <span className="text-xs font-bold leading-none">{evt.time.split(':')[0]}</span>
-                                        <span className="text-[10px] opacity-70 leading-none">{evt.time.split(':')[1]}</span>
-                                    </>
-                                ) : (
-                                    <IconClock className="w-5 h-5" />
-                                )}
+                    sortedEvents.map(evt => {
+                        const isCompleted = evt.status === 'completed' || evt.completed === true;
+                        const isCancelled = evt.status === 'cancelled';
+                        const isActive = !isCompleted && !isCancelled;
+
+                        return (
+                            <div 
+                                key={evt.id} 
+                                onClick={() => toggleEventStatus(selectedDateStr, evt.id)}
+                                className={`flex items-center p-4 rounded-2xl border shadow-sm transition-all active:scale-[0.98] cursor-pointer
+                                    ${isCompleted ? 'bg-green-50 border-green-100 opacity-80' : 
+                                      isCancelled ? 'bg-slate-100 border-slate-100 opacity-60' : 
+                                      'bg-white border-slate-100'}
+                                `}
+                            >
+                                <div className={`h-12 w-12 rounded-2xl flex flex-col items-center justify-center mr-4 transition-colors ${
+                                    isCompleted ? 'bg-green-100 text-green-600' : 
+                                    isCancelled ? 'bg-slate-200 text-slate-400' :
+                                    (evt.time ? 'bg-primary-50 text-primary-600' : 'bg-slate-50 text-slate-400')
+                                }`}>
+                                    {isCompleted ? <IconCheck className="w-6 h-6"/> : (
+                                        evt.time ? (
+                                            <>
+                                                <span className={`text-xs font-bold leading-none ${isCancelled && 'line-through'}`}>{evt.time.split(':')[0]}</span>
+                                                <span className="text-[10px] opacity-70 leading-none">{evt.time.split(':')[1]}</span>
+                                            </>
+                                        ) : (
+                                            <IconClock className="w-5 h-5" />
+                                        )
+                                    )}
+                                </div>
+                                <div className="flex-1 min-w-0">
+                                    <p className={`font-bold text-base truncate transition-all ${!isActive ? 'text-slate-400 line-through' : 'text-slate-800'}`}>{evt.title}</p>
+                                    {evt.time && isActive && <p className="text-xs text-primary-500 font-semibold mt-0.5">Scheduled</p>}
+                                    {isCompleted && <p className="text-xs text-green-600 font-semibold mt-0.5">Completed</p>}
+                                    {isCancelled && <p className="text-xs text-slate-400 font-semibold mt-0.5">Cancelled</p>}
+                                </div>
+                                <button 
+                                    onClick={(e) => { e.stopPropagation(); deleteEvent(selectedDateStr, evt.id); }} 
+                                    className="text-slate-300 hover:text-red-400 p-2 transition-colors"
+                                >
+                                    <IconTrash className="w-4 h-4"/>
+                                </button>
                             </div>
-                            <div className="flex-1 min-w-0">
-                                <p className="font-bold text-slate-800 text-base truncate">{evt.title}</p>
-                                {evt.time && <p className="text-xs text-primary-500 font-semibold mt-0.5">Scheduled</p>}
-                            </div>
-                            <button onClick={() => deleteEvent(selectedDateStr, evt.id)} className="text-slate-300 hover:text-red-400 p-2 transition-colors">
-                                <IconTrash className="w-4 h-4"/>
-                            </button>
-                        </div>
-                    ))
+                        );
+                    })
                 )}
             </div>
 

@@ -28,6 +28,57 @@ export const requestNotificationPermission = async () => {
   }
 };
 
+// Define constants
+const REMINDER_CHANNEL_ID = 'mindflow_alerts';
+const REMINDER_ACTION_TYPE = 'EVENT_REMINDER_ACTIONS';
+
+export const configureNotifications = async () => {
+  if (!Capacitor.isNativePlatform()) return;
+
+  try {
+    // 1. Create a Channel with High Importance for Sound and Vibration (Android)
+    await LocalNotifications.createChannel({
+        id: REMINDER_CHANNEL_ID,
+        name: 'Event Reminders',
+        description: 'Notifications for scheduled calendar events',
+        importance: 5, // HIGH importance (heads-up display, sound, vibration)
+        visibility: 1, // PUBLIC
+        vibration: true,
+        sound: 'beep.wav' // Falls back to default if not found
+    });
+
+    // 2. Register Action Types (Buttons)
+    await LocalNotifications.registerActionTypes({
+      types: [
+        {
+          id: REMINDER_ACTION_TYPE,
+          actions: [
+            {
+              id: 'complete',
+              title: 'Complete',
+              foreground: false // Perform in background
+            },
+            {
+              id: 'snooze',
+              title: 'Snooze 10m',
+              foreground: false
+            },
+            {
+              id: 'cancel',
+              title: 'Cancel Event',
+              destructive: true, // Usually red
+              foreground: false
+            }
+          ]
+        }
+      ]
+    });
+    console.log('Notification channels and actions configured');
+  } catch (e) {
+    console.error('Failed to configure notifications', e);
+  }
+};
+
 export const scheduleNotification = async (
   id: string,
   title: string,
@@ -38,11 +89,9 @@ export const scheduleNotification = async (
   if (!Capacitor.isNativePlatform()) return;
 
   try {
-    // Construct Date object
     const scheduleDate = new Date(`${dateStr}T${timeStr}:00`);
     const now = new Date();
 
-    // Only schedule if the time is in the future
     if (scheduleDate <= now) return;
 
     const intId = hashCode(id);
@@ -54,10 +103,14 @@ export const scheduleNotification = async (
           body: body || `Reminder for ${timeStr}`,
           id: intId,
           schedule: { at: scheduleDate },
-          sound: undefined, // Use default system sound
-          attachments: undefined,
-          actionTypeId: "",
-          extra: null
+          channelId: REMINDER_CHANNEL_ID, // Use our high-priority channel
+          actionTypeId: REMINDER_ACTION_TYPE, // Attach buttons
+          extra: {
+            eventId: id,
+            dateStr: dateStr,
+            originalTitle: title,
+            originalBody: body
+          }
         }
       ]
     });
@@ -65,6 +118,31 @@ export const scheduleNotification = async (
   } catch (e) {
     console.error("Failed to schedule notification", e);
   }
+};
+
+export const snoozeNotification = async (notification: any) => {
+    if (!Capacitor.isNativePlatform()) return;
+    
+    try {
+        const extra = notification.extra;
+        // Schedule for 10 minutes from now
+        const snoozeTime = new Date(Date.now() + 10 * 60 * 1000); 
+        
+        await LocalNotifications.schedule({
+            notifications: [{
+                title: extra?.originalTitle || notification.title,
+                body: "💤 Snoozed: " + (extra?.originalBody || notification.body),
+                id: notification.id + 1, // Simple way to generate new ID or use same
+                schedule: { at: snoozeTime },
+                channelId: REMINDER_CHANNEL_ID,
+                actionTypeId: REMINDER_ACTION_TYPE,
+                extra: extra
+            }]
+        });
+        console.log("Notification snoozed for 10 minutes");
+    } catch (e) {
+        console.error("Failed to snooze", e);
+    }
 };
 
 export const cancelNotification = async (id: string) => {
