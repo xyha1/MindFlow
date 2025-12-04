@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { CalendarEvent } from '../types';
-import { IconChevronLeft, IconChevronRight, IconClock, IconPlus, IconTrash, IconSparkles, IconCheck } from './Icons';
+import { IconChevronLeft, IconChevronRight, IconClock, IconPlus, IconTrash, IconSparkles } from './Icons';
 import { suggestEventTitle } from '../services/geminiService';
 import { scheduleNotification, cancelNotification, requestNotificationPermission } from '../services/notificationService';
 import useLocalStorage from '../hooks/useLocalStorage';
@@ -46,7 +46,6 @@ const CalendarView: React.FC = () => {
       dateStr: targetDate,
       title: title,
       time: timeOverride,
-      completed: false
     };
 
     setEvents(prev => ({
@@ -98,16 +97,6 @@ const CalendarView: React.FC = () => {
         }
         return { ...prev, [dateStr]: newDayEvents };
     });
-  };
-  
-  const toggleEventCompletion = (dateStr: string, id: string) => {
-      setEvents(prev => {
-          const dayEvents = prev[dateStr] || [];
-          const updatedEvents = dayEvents.map(evt => 
-              evt.id === id ? { ...evt, completed: !evt.completed } : evt
-          );
-          return { ...prev, [dateStr]: updatedEvents };
-      });
   };
 
   // Generate grid cells
@@ -177,36 +166,22 @@ const CalendarView: React.FC = () => {
                     selectedEvents
                     .sort((a, b) => (a.time || '').localeCompare(b.time || ''))
                     .map(evt => (
-                        <div 
-                            key={evt.id} 
-                            onClick={() => toggleEventCompletion(selectedDateStr, evt.id)}
-                            className={`flex items-center p-4 rounded-2xl border shadow-sm transition-all active:scale-[0.98] cursor-pointer
-                                ${evt.completed ? 'bg-green-50 border-green-100 opacity-80' : 'bg-white border-slate-100'}
-                            `}
-                        >
-                            <div className={`h-12 w-12 rounded-2xl flex flex-col items-center justify-center mr-4 transition-colors ${
-                                evt.completed ? 'bg-green-100 text-green-600' : (evt.time ? 'bg-primary-50 text-primary-600' : 'bg-slate-50 text-slate-400')
-                            }`}>
-                                {evt.completed ? <IconCheck className="w-6 h-6"/> : (
-                                    evt.time ? (
-                                        <>
-                                            <span className="text-xs font-bold leading-none">{evt.time.split(':')[0]}</span>
-                                            <span className="text-[10px] opacity-70 leading-none">{evt.time.split(':')[1]}</span>
-                                        </>
-                                    ) : (
-                                        <IconClock className="w-5 h-5" />
-                                    )
+                        <div key={evt.id} className="flex items-center p-4 bg-white rounded-2xl border border-slate-100 shadow-sm transition-transform active:scale-[0.98]">
+                            <div className={`h-12 w-12 rounded-2xl flex flex-col items-center justify-center mr-4 ${evt.time ? 'bg-primary-50 text-primary-600' : 'bg-slate-50 text-slate-400'}`}>
+                                {evt.time ? (
+                                    <>
+                                        <span className="text-xs font-bold leading-none">{evt.time.split(':')[0]}</span>
+                                        <span className="text-[10px] opacity-70 leading-none">{evt.time.split(':')[1]}</span>
+                                    </>
+                                ) : (
+                                    <IconClock className="w-5 h-5" />
                                 )}
                             </div>
                             <div className="flex-1 min-w-0">
-                                <p className={`font-bold text-base truncate transition-all ${evt.completed ? 'text-slate-400 line-through' : 'text-slate-800'}`}>{evt.title}</p>
-                                {evt.time && !evt.completed && <p className="text-xs text-primary-500 font-semibold mt-0.5">Scheduled</p>}
-                                {evt.completed && <p className="text-xs text-green-600 font-semibold mt-0.5">Completed</p>}
+                                <p className="font-bold text-slate-800 text-base truncate">{evt.title}</p>
+                                {evt.time && <p className="text-xs text-primary-500 font-semibold mt-0.5">Scheduled</p>}
                             </div>
-                            <button 
-                                onClick={(e) => { e.stopPropagation(); deleteEvent(selectedDateStr, evt.id); }} 
-                                className="text-slate-300 hover:text-red-400 p-2 transition-colors"
-                            >
+                            <button onClick={() => deleteEvent(selectedDateStr, evt.id)} className="text-slate-300 hover:text-red-400 p-2 transition-colors">
                                 <IconTrash className="w-4 h-4"/>
                             </button>
                         </div>

@@ -18,7 +18,6 @@ export interface CalendarEvent {
   dateStr: string; // YYYY-MM-DD
   title: string;
   time?: string;
-  completed?: boolean;
 }
 
 export interface Idea {

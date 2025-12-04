@@ -28,39 +28,6 @@ export const requestNotificationPermission = async () => {
   }
 };
 
-// Define Action Type ID
-const REMINDER_ACTION_TYPE = 'EVENT_REMINDER';
-
-export const configureNotifications = async () => {
-  if (!Capacitor.isNativePlatform()) return;
-
-  try {
-    await LocalNotifications.registerActionTypes({
-      types: [
-        {
-          id: REMINDER_ACTION_TYPE,
-          actions: [
-            {
-              id: 'complete',
-              title: 'Mark Completed',
-              foreground: false // Perform action in background without opening app fully if possible
-            },
-            {
-              id: 'ignore',
-              title: 'Ignore',
-              destructive: true, // Usually shows in red
-              foreground: false
-            }
-          ]
-        }
-      ]
-    });
-    console.log('Notification actions configured');
-  } catch (e) {
-    console.error('Failed to configure notifications', e);
-  }
-};
-
 export const scheduleNotification = async (
   id: string,
   title: string,
@@ -87,12 +54,10 @@ export const scheduleNotification = async (
           body: body || `Reminder for ${timeStr}`,
           id: intId,
           schedule: { at: scheduleDate },
-          sound: undefined, 
-          actionTypeId: REMINDER_ACTION_TYPE, // Link to the buttons we defined
-          extra: {
-            eventId: id,
-            dateStr: dateStr
-          }
+          sound: undefined, // Use default system sound
+          attachments: undefined,
+          actionTypeId: "",
+          extra: null
         }
       ]
     });
