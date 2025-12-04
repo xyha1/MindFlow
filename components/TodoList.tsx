@@ -174,7 +174,8 @@ const TodoList: React.FC = () => {
         )}
         <button
           onClick={() => addTask(inputValue)}
-          className="bg-primary-500 text-white p-4 rounded-2xl shadow-lg shadow-primary-500/30 hover:bg-primary-600 transition-colors"
+          disabled={!inputValue.trim()}
+          className="bg-primary-500 text-white p-4 rounded-2xl shadow-lg shadow-primary-500/30 hover:bg-primary-600 transition-colors disabled:opacity-50 disabled:shadow-none"
         >
           <IconPlus className="w-6 h-6" />
         </button>

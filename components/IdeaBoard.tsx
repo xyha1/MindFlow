@@ -53,7 +53,8 @@ const IdeaBoard: React.FC = () => {
         />
         <button
           onClick={addIdea}
-          className="absolute bottom-4 right-4 bg-primary-500 text-white p-3 rounded-xl shadow-md hover:bg-primary-600 transition-all hover:scale-105 active:scale-95"
+          disabled={!inputValue.trim()}
+          className="absolute bottom-4 right-4 bg-primary-500 text-white p-3 rounded-xl shadow-md hover:bg-primary-600 transition-all hover:scale-105 active:scale-95 disabled:opacity-50 disabled:scale-100 disabled:shadow-none"
         >
           <IconPlus className="w-5 h-5" />
         </button>

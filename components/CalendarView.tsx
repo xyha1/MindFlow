@@ -36,6 +36,8 @@ const CalendarView: React.FC = () => {
   };
 
   const addEvent = async (title: string, dateOverride?: string, timeOverride?: string) => {
+    if (!title.trim()) return;
+
     const targetDate = dateOverride || selectedDateStr;
     const eventId = Date.now().toString();
     
@@ -207,7 +209,11 @@ const CalendarView: React.FC = () => {
                             {isAiLoading ? <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin"/> : <IconSparkles className="w-6 h-6"/>}
                         </button>
                     ) : (
-                        <button onClick={() => addEvent(newEventTitle)} className="bg-primary-500 text-white w-14 rounded-2xl shadow-xl shadow-primary-500/30 flex items-center justify-center">
+                        <button 
+                          onClick={() => addEvent(newEventTitle)} 
+                          disabled={!newEventTitle.trim()}
+                          className="bg-primary-500 text-white w-14 rounded-2xl shadow-xl shadow-primary-500/30 flex items-center justify-center disabled:opacity-50 disabled:shadow-none transition-all active:scale-95"
+                        >
                             <IconPlus className="w-6 h-6"/>
                         </button>
                     )}
