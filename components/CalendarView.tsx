@@ -1,7 +1,8 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { CalendarEvent } from '../types';
 import { IconChevronLeft, IconChevronRight, IconClock, IconPlus, IconTrash, IconSparkles } from './Icons';
 import { suggestEventTitle } from '../services/geminiService';
+import { scheduleNotification, cancelNotification, requestNotificationPermission } from '../services/notificationService';
 import useLocalStorage from '../hooks/useLocalStorage';
 
 const CalendarView: React.FC = () => {
@@ -10,6 +11,11 @@ const CalendarView: React.FC = () => {
   const [events, setEvents] = useLocalStorage<Record<string, CalendarEvent[]>>('mindflow_events', {});
   const [newEventTitle, setNewEventTitle] = useState('');
   const [isAiLoading, setIsAiLoading] = useState(false);
+
+  // Request notification permissions on mount
+  useEffect(() => {
+    requestNotificationPermission();
+  }, []);
 
   const getDaysInMonth = (year: number, month: number) => new Date(year, month + 1, 0).getDate();
   const getFirstDayOfMonth = (year: number, month: number) => new Date(year, month, 1).getDay();
@@ -29,10 +35,12 @@ const CalendarView: React.FC = () => {
     setSelectedDateStr(dateStr);
   };
 
-  const addEvent = (title: string, dateOverride?: string, timeOverride?: string) => {
+  const addEvent = async (title: string, dateOverride?: string, timeOverride?: string) => {
     const targetDate = dateOverride || selectedDateStr;
+    const eventId = Date.now().toString();
+    
     const newEvent: CalendarEvent = {
-      id: Date.now().toString(),
+      id: eventId,
       dateStr: targetDate,
       title: title,
       time: timeOverride,
@@ -43,6 +51,17 @@ const CalendarView: React.FC = () => {
       [targetDate]: [...(prev[targetDate] || []), newEvent]
     }));
     setNewEventTitle('');
+    
+    // Schedule Notification if time exists
+    if (timeOverride) {
+      await scheduleNotification(
+        eventId,
+        "MindFlow Reminder",
+        title,
+        targetDate,
+        timeOverride
+      );
+    }
     
     // Jump to the date of the new event if it's different
     if(dateOverride && dateOverride !== selectedDateStr) {
@@ -60,11 +79,14 @@ const CalendarView: React.FC = () => {
         setIsAiLoading(true);
         const suggestion = await suggestEventTitle(newEventTitle);
         setIsAiLoading(false);
-        addEvent(suggestion.title, suggestion.date || undefined, suggestion.time);
+        addEvent(suggestion.title, suggestion.date || undefined, suggestion.time || undefined);
     };
 
 
   const deleteEvent = (dateStr: string, id: string) => {
+    // Cancel the notification
+    cancelNotification(id);
+
     setEvents(prev => {
         const newDayEvents = prev[dateStr].filter(e => e.id !== id);
         if (newDayEvents.length === 0) {
