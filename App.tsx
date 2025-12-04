@@ -1,15 +1,60 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import TabBar from './components/TabBar';
 import TodoList from './components/TodoList';
 import CalendarView from './components/CalendarView';
 import IdeaBoard from './components/IdeaBoard';
-import { Tab } from './types';
+import { Tab, CalendarEvent } from './types';
 import useLocalStorage from './hooks/useLocalStorage';
 import { checkSystemStatus } from './services/geminiService';
+import { configureNotifications } from './services/notificationService';
+import { LocalNotifications } from '@capacitor/local-notifications';
 
 const App: React.FC = () => {
   const [activeTab, setActiveTab] = useLocalStorage<Tab>('mindflow_active_tab', Tab.TODO);
   const [diagMessage, setDiagMessage] = useState<string>('');
+
+  // Initialize notifications and listeners
+  useEffect(() => {
+    configureNotifications();
+
+    const listener = LocalNotifications.addListener('localNotificationActionPerformed', async (notification) => {
+      const actionId = notification.actionId;
+      const extra = notification.notification.extra;
+
+      if (actionId === 'complete' && extra?.eventId && extra?.dateStr) {
+        // Handle "Complete" action
+        try {
+          const storedEventsStr = window.localStorage.getItem('mindflow_events');
+          if (storedEventsStr) {
+            const allEvents: Record<string, CalendarEvent[]> = JSON.parse(storedEventsStr);
+            const dateEvents = allEvents[extra.dateStr];
+            
+            if (dateEvents) {
+              const updatedDateEvents = dateEvents.map(evt => 
+                evt.id === extra.eventId ? { ...evt, completed: true } : evt
+              );
+              
+              const newEvents = { ...allEvents, [extra.dateStr]: updatedDateEvents };
+              
+              // Update Storage
+              window.localStorage.setItem('mindflow_events', JSON.stringify(newEvents));
+              
+              // Trigger hook update across app
+              window.dispatchEvent(new Event('local-storage'));
+              console.log('Event marked completed via notification');
+            }
+          }
+        } catch (e) {
+          console.error("Failed to update event from notification", e);
+        }
+      }
+      // 'ignore' action simply dismisses notification, no logic needed
+    });
+
+    return () => {
+      listener.then(remove => remove.remove());
+    };
+  }, []);
 
   const renderContent = () => {
     switch (activeTab) {
