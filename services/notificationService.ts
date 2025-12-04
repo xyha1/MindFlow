@@ -28,8 +28,9 @@ export const requestNotificationPermission = async () => {
   }
 };
 
-// Define constants
-const REMINDER_CHANNEL_ID = 'mindflow_alerts';
+// CHANGED: Use v2 ID to force Android to recreate the channel with new high-priority settings
+// This is critical for Xiaomi devices where channel settings get cached aggressively
+const REMINDER_CHANNEL_ID = 'mindflow_alerts_v2';
 const REMINDER_ACTION_TYPE = 'EVENT_REMINDER_ACTIONS';
 
 export const configureNotifications = async () => {
@@ -42,9 +43,10 @@ export const configureNotifications = async () => {
         name: 'Event Reminders',
         description: 'Notifications for scheduled calendar events',
         importance: 5, // HIGH importance (heads-up display, sound, vibration)
-        visibility: 1, // PUBLIC
+        visibility: 1, // PUBLIC (Show on lock screen)
         vibration: true,
-        sound: 'beep.wav' // Falls back to default if not found
+        lights: true,
+        lightColor: '#14b8a6', // Teal
     });
 
     // 2. Register Action Types (Buttons)
@@ -56,7 +58,7 @@ export const configureNotifications = async () => {
             {
               id: 'complete',
               title: 'Complete',
-              foreground: false // Perform in background
+              foreground: false 
             },
             {
               id: 'snooze',
@@ -65,7 +67,7 @@ export const configureNotifications = async () => {
             },
             {
               id: 'cancel',
-              title: 'Cancel Event',
+              title: 'Cancel',
               destructive: true, // Usually red
               foreground: false
             }
@@ -73,7 +75,7 @@ export const configureNotifications = async () => {
         }
       ]
     });
-    console.log('Notification channels and actions configured');
+    console.log('Notification channels and actions configured (v2)');
   } catch (e) {
     console.error('Failed to configure notifications', e);
   }
@@ -102,9 +104,13 @@ export const scheduleNotification = async (
           title: title,
           body: body || `Reminder for ${timeStr}`,
           id: intId,
-          schedule: { at: scheduleDate },
+          schedule: { 
+            at: scheduleDate,
+            allowWhileIdle: true // CRITICAL: Fixes late delivery in Android Doze mode
+          },
           channelId: REMINDER_CHANNEL_ID, // Use our high-priority channel
           actionTypeId: REMINDER_ACTION_TYPE, // Attach buttons
+          smallIcon: 'ic_stat_icon_config_sample', // Default capacitor resource for clean icon
           extra: {
             eventId: id,
             dateStr: dateStr,
@@ -133,9 +139,13 @@ export const snoozeNotification = async (notification: any) => {
                 title: extra?.originalTitle || notification.title,
                 body: "💤 Snoozed: " + (extra?.originalBody || notification.body),
                 id: notification.id + 1, // Simple way to generate new ID or use same
-                schedule: { at: snoozeTime },
+                schedule: { 
+                  at: snoozeTime,
+                  allowWhileIdle: true 
+                },
                 channelId: REMINDER_CHANNEL_ID,
                 actionTypeId: REMINDER_ACTION_TYPE,
+                smallIcon: 'ic_stat_icon_config_sample',
                 extra: extra
             }]
         });
